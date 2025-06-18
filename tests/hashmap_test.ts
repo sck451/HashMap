@@ -100,7 +100,7 @@ Deno.test("HashMap retain() filters entries", () => {
   map.set("a", 1);
   map.set("b", 2);
   map.set("c", 3);
-  map.retain((_, v) => v % 2 === 1);
+  map.retain((v) => v % 2 === 1);
 
   expect(map.size()).toBe(2);
   expect(map.get("a")).toEqual(some(1));
