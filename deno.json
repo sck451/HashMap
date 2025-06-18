@@ -1,0 +1,19 @@
+{
+  "name": "@sck/hashmap",
+  "exports": "./main.ts",
+  "version": "0.1.0",
+  "license": "MIT",
+  "lint": { "rules": { "tags": ["jsr"] } },
+  "imports": {
+    "@sck/optres": "jsr:@sck/optres@^0.1.2",
+    "@std/expect": "jsr:@std/expect@1"
+  },
+  "compilerOptions": {
+    "exactOptionalPropertyTypes": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitOverride": true,
+    "noImplicitReturns": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "noUncheckedIndexedAccess": true
+  }
+}
