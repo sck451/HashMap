@@ -20,6 +20,7 @@ Deno.test("HashMap getKeyValue returns key and value", () => {
   const map = new HashMap<string, number>();
   map.set("x", 42);
   expect(map.getKeyValue("x")).toEqual(some(["x", 42]));
+  expect(map.getKeyValue("y")).toEqual(none());
 });
 
 Deno.test("HashMap remove returns value and deletes entry", () => {
@@ -27,6 +28,14 @@ Deno.test("HashMap remove returns value and deletes entry", () => {
   map.set("a", "alpha");
   expect(map.remove("a")).toEqual(some("alpha"));
   expect(map.get("a")).toEqual(none());
+});
+
+Deno.test("HashMap remove does nothing if the key is not present", () => {
+  const map = new HashMap<string, number>();
+
+  map.set("example", 42);
+  expect(map.remove("exampleB")).toEqual(none());
+  expect(map.get("example")).toEqual(some(42));
 });
 
 Deno.test("HashMap clear empties all entries", () => {
@@ -37,6 +46,59 @@ Deno.test("HashMap clear empties all entries", () => {
 
   expect(map.size()).toBe(0);
   expect([...map]).toEqual([]);
+});
+
+Deno.test("HashMap#reserve makes enough space for additional entries", () => {
+  const map = new HashMap<string, number>();
+  map.reserve(50);
+  expect(map.capacity()).toBeGreaterThanOrEqual(50);
+});
+
+Deno.test("HashMap#shrinkToFit reduces to fit only the current contents", () => {
+  const map = new HashMap<string, number>();
+
+  map.reserve(50);
+  map.set("example", 42);
+  map.shrinkToFit();
+
+  expect(map.capacity()).toBeLessThan(5); // getting a precise capacity is not guaranteed
+});
+
+Deno.test("HashMap#shrinkTo reduces capacity accordingly", () => {
+  const map = new HashMap<string, number>();
+
+  map.reserve(50);
+  map.shrinkTo(10);
+
+  expect(map.capacity()).toBeLessThan(15); // getting a precise capacity is not guaranteed
+
+  map.set("exampleA", 21);
+  map.set("exampleB", 42);
+  map.set("exampleC", 84);
+  map.set("exampleD", 168);
+  map.set("exampleE", 336);
+
+  map.shrinkTo(2);
+  expect(map.capacity()).toBeGreaterThan(2);
+  expect(map.capacity()).toBeLessThan(10);
+});
+
+Deno.test("HashMap#keys gets the correct keys", () => {
+  const map = new HashMap<string, number>();
+
+  map.set("exampleA", 42);
+  map.set("exampleB", 84);
+
+  expect([...map.keys()].sort()).toEqual(["exampleA", "exampleB"]);
+});
+
+Deno.test("HashMap#values gets the correct values", () => {
+  const map = new HashMap<string, number>();
+
+  map.set("exampleA", 42);
+  map.set("exampleB", 84);
+
+  expect([...map.values()].sort()).toEqual([42, 84]);
 });
 
 Deno.test("HashMap entries() produces Entry wrappers", () => {
@@ -126,6 +188,32 @@ Deno.test("HashMap.from() builds map from pairs", () => {
   expect(map.get("b")).toEqual(some(2));
 });
 
+Deno.test("HashMap#info gets relevant information", () => {
+  const map = new HashMap<string, number>();
+
+  map.set("example", 42);
+
+  const info = map.info();
+
+  expect(info.capacity).toBeGreaterThanOrEqual(1);
+  expect(info.size).toBe(1);
+  expect(info.buckets).toBeGreaterThanOrEqual(1);
+});
+
+Deno.test("Entry#isOccupied correctly determines if a slot is occupied", () => {
+  const hashmap = new HashMap<string, number>();
+
+  const entryA = hashmap.entry("example");
+  expect(entryA.isOccupied()).toBe(false);
+  hashmap.set("example", 42);
+  expect(entryA.isOccupied()).toBe(true);
+
+  const entryB = hashmap.entry("exampleB");
+  expect(entryB.isOccupied()).toBe(false);
+  entryB.orInsert(42);
+  expect(entryB.isOccupied()).toBe(true);
+});
+
 Deno.test("HashMap: entry().orInsert inserts if missing", () => {
   const map = new HashMap<string, number>();
   const entry = map.entry("x");
@@ -164,4 +252,44 @@ Deno.test("HashMap: Entry.remove() removes entry", () => {
   expect(entry.remove()).toEqual(some("world"));
   expect(map.has("hello")).toBe(false);
   expect(map.entry("bonjour").remove()).toEqual(none());
+});
+
+Deno.test("HashMap: Entry#insertEntry inserts an entry into a HashMap, overriding any existing value", () => {
+  const map = new HashMap<string, number>();
+  map.set("example", 42);
+
+  map.entry("example").insertEntry(84);
+  map.entry("exampleB").insertEntry(42);
+
+  expect(map.get("example")).toEqual(some(84));
+  expect(map.get("exampleB")).toEqual(some(42));
+});
+
+Deno.test("HashMap: Entry#key gets the correct key from a HashMap", () => {
+  const mapA = new HashMap<string, number>();
+  expect(mapA.entry("example").key()).toBe("example");
+
+  const mapB = new HashMap<URL, number>();
+  const url = new URL("https://example.com");
+  expect(mapB.entry(url).key()).toBe(url);
+});
+
+Deno.test("HashMap: Entry#insert inserts a new value and gives the old value back if one existed", () => {
+  const map = new HashMap<string, number>();
+
+  map.set("exampleA", 42);
+
+  expect(map.entry("exampleA").insert(84)).toEqual(some(42));
+  expect(map.entry("exampleB").insert(42)).toEqual(none());
+});
+
+Deno.test("HashMap: Entry#removeEntry removes the entry from the HashMap and gives the old value in a KV tuple if one existed", () => {
+  const map = new HashMap<string, number>();
+
+  map.set("exampleA", 42);
+  map.set("exampleC", 21);
+
+  expect(map.entry("exampleA").removeEntry()).toEqual(some(["exampleA", 42]));
+  expect(map.entry("exampleB").removeEntry()).toEqual(none());
+  expect(map.get("exampleC")).toEqual(some(21));
 });
