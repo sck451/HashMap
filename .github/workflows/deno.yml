@@ -30,3 +30,6 @@ jobs:
 
       - name: Run tests
         run: deno test -A
+
+      - name: Publish to JSR
+        run: deno publish
